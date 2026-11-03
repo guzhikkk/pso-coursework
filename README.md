@@ -1,4 +1,5 @@
-# 🐝 Particle Swarm Optimization (PSO) algorithm (Метод роя частиц)
+# 🐝 Particle Swarm Optimization (PSO) algorithm 
+# Метод роя частиц
 
 Курсовая работа по дисциплине «Алгоритмы и структуры данных».
 
