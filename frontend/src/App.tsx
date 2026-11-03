@@ -21,7 +21,7 @@ interface SwarmState {
   history: { iteration: number; best_score: number }[];
 }
 
-const API_URL = 'http://127.0.0.1:5000/api';
+const API_URL = 'https://pso-coursework.onrender.com/api';
 
 // Математические функции на клиенте для быстрой отрисовки тепловой карты рельефа
 const evalFunc = (fn: string, x: number, y: number): number => {
