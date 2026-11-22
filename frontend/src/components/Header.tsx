@@ -3,7 +3,6 @@ import {
   Gauge,
   GitCompare,
   Moon,
-  Sparkles,
   Sun,
   Wifi,
   WifiOff,
@@ -27,6 +26,26 @@ const TABS: Array<{ id: AppTab; label: string; icon: typeof Activity }> = [
   { id: 'scale', label: 'Масштабирование', icon: Gauge },
 ];
 
+function HoneycombLogo() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polygon points="12 2 16.5 4.6 16.5 9.8 12 12.4 7.5 9.8 7.5 4.6" fill="currentColor" fillOpacity="0.22" />
+      <polygon points="7.5 9.8 12 12.4 12 17.6 7.5 20.2 3 17.6 3 12.4" />
+      <polygon points="16.5 9.8 21 12.4 21 17.6 16.5 20.2 12 17.6 12 12.4" />
+    </svg>
+  );
+}
+
 export function Header({
   activeTab,
   onTabChange,
@@ -39,7 +58,7 @@ export function Header({
       <div className="app-header-inner">
         <div className="brand">
           <div className="brand-icon" aria-hidden="true">
-            <Sparkles size={20} />
+            <HoneycombLogo />
           </div>
           <div>
             <h1 className="brand-title">PSO Visualizer</h1>

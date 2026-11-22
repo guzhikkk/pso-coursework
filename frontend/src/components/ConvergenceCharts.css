@@ -21,9 +21,14 @@
 .chart-svg-wrap {
   width: 100%;
   border-radius: var(--radius-md);
-  background: var(--bg-app);
+  background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   padding: var(--space-2);
+  transition: border-color 0.18s ease;
+}
+
+.chart-svg-wrap:hover {
+  border-color: var(--border-gold);
 }
 
 .chart-svg {
@@ -55,6 +60,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: 500;
 }
 
 .chart-swatch {

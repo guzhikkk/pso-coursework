@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { CheckCircle2, Play, RotateCcw } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import type {
@@ -20,6 +20,96 @@ interface ControlPanelProps {
   isLoading: boolean;
 }
 
+function rangeStyle(value: number, min: number, max: number): CSSProperties {
+  const pct = Math.max(0, Math.min(100, ((value - min) / Math.max(1e-9, max - min)) * 100));
+  return { '--range-progress': `${pct}%` } as CSSProperties;
+}
+
+function getShortFormula(id: string): string {
+  const key = id.toLowerCase();
+  if (key.includes('sphere')) return 'Σ xᵢ²';
+  if (key.includes('rastrigin')) return '10n + Σ(xᵢ² − 10cos)';
+  if (key.includes('rosenbrock')) return 'Σ[100(y−x²)² + (1−x)²]';
+  if (key.includes('ackley')) return '−20e^(−0.2√…) − e^(cos)';
+  return 'f(x₁, …, xₙ)';
+}
+
+function FunctionReliefIcon({ id }: { id: string }) {
+  const key = id.toLowerCase();
+
+  if (key.includes('sphere')) {
+    return (
+      <svg className="preset-card-svg" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+        <circle cx="40" cy="18" r="15" stroke="#f59e0b" strokeOpacity="0.28" strokeWidth="1.2" />
+        <circle cx="40" cy="18" r="10" stroke="#f59e0b" strokeOpacity="0.55" strokeWidth="1.2" />
+        <circle cx="40" cy="18" r="5" stroke="#fbbf24" strokeOpacity="0.85" strokeWidth="1.4" />
+        <circle cx="40" cy="18" r="2" fill="#fcd34d" />
+      </svg>
+    );
+  }
+
+  if (key.includes('rastrigin')) {
+    return (
+      <svg className="preset-card-svg" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+        {[14, 27, 40, 53, 66].map((cx) =>
+          [10, 18, 26].map((cy) => (
+            <circle
+              key={`${cx}-${cy}`}
+              cx={cx}
+              cy={cy}
+              r={cx === 40 && cy === 18 ? 2.6 : 1.7}
+              fill={cx === 40 && cy === 18 ? '#fcd34d' : '#f59e0b'}
+              fillOpacity={cx === 40 && cy === 18 ? 1 : 0.45}
+            />
+          ))
+        )}
+      </svg>
+    );
+  }
+
+  if (key.includes('rosenbrock')) {
+    return (
+      <svg className="preset-card-svg" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+        <path
+          d="M10 8 C24 32, 56 32, 70 8"
+          stroke="#f59e0b"
+          strokeOpacity="0.35"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M16 10 C28 28, 52 28, 64 10"
+          stroke="#fbbf24"
+          strokeOpacity="0.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <circle cx="40" cy="23" r="2.2" fill="#fcd34d" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="preset-card-svg" viewBox="0 0 80 36" fill="none" aria-hidden="true">
+      <path
+        d="M8 18 Q26 18 40 4 Q54 18 72 18 Q54 18 40 32 Q26 18 8 18 Z"
+        stroke="#f59e0b"
+        strokeOpacity="0.45"
+        strokeWidth="1.2"
+        fill="#f59e0b"
+        fillOpacity="0.1"
+      />
+      <path
+        d="M22 18 Q34 18 40 10 Q46 18 58 18 Q46 18 40 26 Q34 18 22 18 Z"
+        stroke="#fbbf24"
+        strokeOpacity="0.8"
+        strokeWidth="1.2"
+      />
+      <circle cx="40" cy="18" r="2.2" fill="#fcd34d" />
+    </svg>
+  );
+}
+
 export function ControlPanel({
   functions,
   config,
@@ -34,6 +124,7 @@ export function ControlPanel({
   const isCustom = config.function_id === 'custom';
   const selectedMeta = functions.find((f) => f.id === config.function_id) ?? null;
   const supportsNd = isCustom ? true : (selectedMeta?.supports_nd ?? true);
+  const quickPresets = functions.slice(0, 4);
 
   const update = <K extends keyof OptimizeConfig>(key: K, value: OptimizeConfig[K]) => {
     onChange({ ...config, [key]: value });
@@ -98,6 +189,10 @@ export function ControlPanel({
     }
   };
 
+  const clampedParticles = Math.min(300, Math.max(5, config.num_particles));
+  const clampedIterations = Math.min(500, Math.max(10, config.max_iterations));
+  const clampedSeed = config.seed === null ? 0 : Math.min(1000, Math.max(0, config.seed));
+
   return (
     <aside className="card control-panel">
       <div className="control-section">
@@ -132,6 +227,24 @@ export function ControlPanel({
             <option value="custom">Своя формула (AST-парсер)</option>
           </select>
         </div>
+
+        {quickPresets.length > 0 && (
+          <div className="preset-grid" role="group" aria-label="Быстрый выбор функции">
+            {quickPresets.map((fn) => (
+              <button
+                key={fn.id}
+                type="button"
+                className={`preset-card${config.function_id === fn.id ? ' active' : ''}`}
+                onClick={() => handleFunctionChange(fn.id)}
+                title={fn.description}
+              >
+                <FunctionReliefIcon id={fn.id} />
+                <span className="preset-card-name">{fn.name}</span>
+                <span className="preset-card-formula mono">{getShortFormula(fn.id)}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {selectedMeta && !isCustom && (
           <div className="function-preview">
@@ -217,7 +330,7 @@ export function ControlPanel({
         <h3 className="control-section-title">Размерность и рой</h3>
 
         <div className="field-row">
-          <div className="field">
+          <div className="slider-field">
             <label className="field-label" htmlFor="dim-input">
               Размерность D
             </label>
@@ -231,8 +344,19 @@ export function ControlPanel({
               value={config.dim}
               onChange={(e) => handleDimChange(Number(e.target.value))}
             />
+            <input
+              type="range"
+              min={2}
+              max={50}
+              disabled={!supportsNd}
+              value={config.dim}
+              style={rangeStyle(config.dim, 2, 50)}
+              onChange={(e) => handleDimChange(Number(e.target.value))}
+              aria-label="Ползунок размерности D"
+            />
           </div>
-          <div className="field">
+
+          <div className="slider-field">
             <label className="field-label" htmlFor="particles-input">
               Частиц N
             </label>
@@ -245,11 +369,21 @@ export function ControlPanel({
               value={config.num_particles}
               onChange={(e) => update('num_particles', Math.max(2, Number(e.target.value) || 2))}
             />
+            <input
+              type="range"
+              min={5}
+              max={300}
+              step={5}
+              value={clampedParticles}
+              style={rangeStyle(clampedParticles, 5, 300)}
+              onChange={(e) => update('num_particles', Number(e.target.value))}
+              aria-label="Ползунок числа частиц N"
+            />
           </div>
         </div>
 
         <div className="field-row">
-          <div className="field">
+          <div className="slider-field">
             <label className="field-label" htmlFor="iters-input">
               Итераций I
             </label>
@@ -262,8 +396,19 @@ export function ControlPanel({
               value={config.max_iterations}
               onChange={(e) => update('max_iterations', Math.max(1, Number(e.target.value) || 1))}
             />
+            <input
+              type="range"
+              min={10}
+              max={500}
+              step={10}
+              value={clampedIterations}
+              style={rangeStyle(clampedIterations, 10, 500)}
+              onChange={(e) => update('max_iterations', Number(e.target.value))}
+              aria-label="Ползунок числа итераций I"
+            />
           </div>
-          <div className="field">
+
+          <div className="slider-field">
             <label className="field-label" htmlFor="seed-input">
               Seed (пусто = случ.)
             </label>
@@ -277,6 +422,16 @@ export function ControlPanel({
                 update('seed', raw === '' ? null : Number(raw));
               }}
               placeholder="42"
+            />
+            <input
+              type="range"
+              min={0}
+              max={1000}
+              step={1}
+              value={clampedSeed}
+              style={rangeStyle(clampedSeed, 0, 1000)}
+              onChange={(e) => update('seed', Number(e.target.value))}
+              aria-label="Ползунок Seed"
             />
           </div>
         </div>
@@ -393,6 +548,7 @@ export function ControlPanel({
               max={1.2}
               step={0.02}
               value={config.w}
+              style={rangeStyle(config.w, 0.1, 1.2)}
               onChange={(e) => update('w', Number(e.target.value))}
             />
           </div>
@@ -400,7 +556,7 @@ export function ControlPanel({
 
         {config.variant === 'ldiw' && (
           <div className="field-row">
-            <div className="field">
+            <div className="slider-field">
               <label className="field-label" htmlFor="wmax-input">
                 ω_max
               </label>
@@ -414,8 +570,18 @@ export function ControlPanel({
                 value={config.w_max}
                 onChange={(e) => update('w_max', Number(e.target.value))}
               />
+              <input
+                type="range"
+                min={0.2}
+                max={1.5}
+                step={0.05}
+                value={Math.min(1.5, Math.max(0.2, config.w_max))}
+                style={rangeStyle(config.w_max, 0.2, 1.5)}
+                onChange={(e) => update('w_max', Number(e.target.value))}
+                aria-label="Ползунок ω_max"
+              />
             </div>
-            <div className="field">
+            <div className="slider-field">
               <label className="field-label" htmlFor="wmin-input">
                 ω_min
               </label>
@@ -429,12 +595,22 @@ export function ControlPanel({
                 value={config.w_min}
                 onChange={(e) => update('w_min', Number(e.target.value))}
               />
+              <input
+                type="range"
+                min={0.05}
+                max={1.0}
+                step={0.05}
+                value={Math.min(1.0, Math.max(0.05, config.w_min))}
+                style={rangeStyle(config.w_min, 0.05, 1.0)}
+                onChange={(e) => update('w_min', Number(e.target.value))}
+                aria-label="Ползунок ω_min"
+              />
             </div>
           </div>
         )}
 
         {config.variant === 'constriction' && (
-          <div className="field">
+          <div className="slider-field">
             <label className="field-label" htmlFor="chi-input">
               <span>Коэффициент сжатия χ</span>
               <span className="mono">{config.chi.toFixed(4)}</span>
@@ -449,11 +625,21 @@ export function ControlPanel({
               value={config.chi}
               onChange={(e) => update('chi', Number(e.target.value))}
             />
+            <input
+              type="range"
+              min={0.1}
+              max={1.0}
+              step={0.01}
+              value={Math.min(1.0, Math.max(0.1, config.chi))}
+              style={rangeStyle(config.chi, 0.1, 1.0)}
+              onChange={(e) => update('chi', Number(e.target.value))}
+              aria-label="Ползунок коэффициента сжатия χ"
+            />
           </div>
         )}
 
         <div className="field-row">
-          <div className="field">
+          <div className="slider-field">
             <label className="field-label" htmlFor="c1-input">
               Когнитивный c₁
             </label>
@@ -467,8 +653,18 @@ export function ControlPanel({
               value={config.c1}
               onChange={(e) => update('c1', Number(e.target.value))}
             />
+            <input
+              type="range"
+              min={0}
+              max={4}
+              step={0.05}
+              value={Math.min(4, Math.max(0, config.c1))}
+              style={rangeStyle(config.c1, 0, 4)}
+              onChange={(e) => update('c1', Number(e.target.value))}
+              aria-label="Ползунок когнитивного коэффициента c₁"
+            />
           </div>
-          <div className="field">
+          <div className="slider-field">
             <label className="field-label" htmlFor="c2-input">
               Социальный c₂
             </label>
@@ -481,6 +677,16 @@ export function ControlPanel({
               className="input mono"
               value={config.c2}
               onChange={(e) => update('c2', Number(e.target.value))}
+            />
+            <input
+              type="range"
+              min={0}
+              max={4}
+              step={0.05}
+              value={Math.min(4, Math.max(0, config.c2))}
+              style={rangeStyle(config.c2, 0, 4)}
+              onChange={(e) => update('c2', Number(e.target.value))}
+              aria-label="Ползунок социального коэффициента c₂"
             />
           </div>
         </div>

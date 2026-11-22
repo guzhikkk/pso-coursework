@@ -19,17 +19,17 @@
 
 .control-section-title {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  color: var(--accent-primary);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
 }
 
 .field-label {
@@ -37,21 +37,101 @@
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* Мини-плитки пресетов тестовых функций */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
+}
+
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+.preset-card:hover {
+  border-color: var(--border-gold);
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+}
+
+.preset-card.active {
+  border-color: var(--border-gold-bright);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  box-shadow: 0 0 14px var(--accent-soft);
+}
+
+.preset-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.preset-card-formula {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.preset-card.active .preset-card-formula {
+  color: var(--accent-primary);
+}
+
+.preset-card-svg {
+  width: 100%;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Обёртка для поля с ползунком */
+.slider-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slider-field input[type='range'] {
+  margin-top: 2px;
 }
 
 .function-preview {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--bg-app);
+  background: var(--bg-input);
   border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-primary);
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -59,41 +139,51 @@
 .function-formula {
   color: var(--accent-primary);
   font-size: 12px;
+  font-weight: 600;
   margin-bottom: var(--space-1);
   word-break: break-word;
 }
 
+/* Сегментные переключатели (gbest / lbest и т. д.) */
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-1);
-  padding: var(--space-1);
+  padding: 4px;
   border-radius: var(--radius-sm);
-  background: var(--bg-app);
+  background: var(--bg-input);
   border: 1px solid var(--border-subtle);
 }
 
 .segmented-btn {
-  padding: var(--space-1) var(--space-2);
+  padding: 6px var(--space-2);
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.segmented-btn:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--accent-soft);
 }
 
 .segmented-btn.active {
-  background: var(--accent-primary);
-  color: #ffffff;
+  background: var(--accent-btn-gradient);
+  color: #1f1204;
+  font-weight: 700;
+  box-shadow: 0 2px 10px var(--accent-glow);
 }
 
 .formula-feedback {
   font-size: 12px;
   padding: var(--space-2);
   border-radius: var(--radius-sm);
+  font-weight: 500;
 }
 
 .formula-feedback.ok {
@@ -106,9 +196,45 @@
   color: var(--accent-danger);
 }
 
+/* Главная кнопка запуска оптимизации с сотами по краям */
 .run-btn {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.run-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.run-btn::before,
+.run-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 84px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.28;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='42' viewBox='0 0 24 42'%3E%3Cpath d='M0 7 L12 0 L24 7 L24 21 L12 28 L0 21 M12 28 L12 42' fill='none' stroke='%23451a03' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-size: 24px 42px;
+}
+
+.run-btn::before {
+  left: 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 15%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 15%, transparent 100%);
+}
+
+.run-btn::after {
+  right: 0;
+  -webkit-mask-image: linear-gradient(270deg, #000 15%, transparent 100%);
+  mask-image: linear-gradient(270deg, #000 15%, transparent 100%);
 }

@@ -15,55 +15,80 @@
   --radius-pill: 9999px;
 
   /* Типографика */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
 
-  /* Тёмная тема (по умолчанию) */
-  --bg-app: #0d1117;
-  --bg-surface: #151b23;
-  --bg-surface-elevated: #1c2430;
-  --bg-input: #0f141b;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  /* Тёмная тема: глубокий тёмно-синий + медовые акценты */
+  --bg-app: #090e1a;
+  --bg-surface: #10182b;
+  --bg-surface-elevated: #17223b;
+  --bg-input: #0b1222;
+  --border-subtle: rgba(251, 191, 36, 0.14);
+  --border-strong: rgba(251, 191, 36, 0.34);
 
-  --text-primary: #e6edf3;
-  --text-secondary: #9aa7b8;
-  --text-muted: #6e7c8f;
+  --text-primary: #f6f4ee;
+  --text-secondary: #a8b3c7;
+  --text-muted: #6e7d97;
 
-  --accent-primary: #58a6ff;
-  --accent-primary-hover: #79b8ff;
-  --accent-soft: rgba(88, 166, 255, 0.14);
-  --accent-secondary: #a78bfa;
+  /* Медовая палитра (жёлтый, оранжевый, коричневый) */
+  --accent-primary: #f59e0b;
+  --accent-primary-hover: #fbbf24;
+  --accent-soft: rgba(245, 158, 11, 0.16);
+  --accent-secondary: #ea580c;
+  --accent-brown: #78350f;
+  --accent-gradient: linear-gradient(90deg, #b45309 0%, #f59e0b 55%, #fcd34d 100%);
+  --accent-btn-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 45%, #ea580c 100%);
+  --accent-glow: rgba(245, 158, 11, 0.36);
+
+  /* Золотая огранка карточек и ползунки */
+  --border-gold: rgba(251, 191, 36, 0.55);
+  --border-gold-bright: #fbbf24;
+  --slider-track-bg: #1b2742;
+  --slider-thumb-border: #fffbeb;
+  --honeycomb-color: rgba(251, 191, 36, 0.08);
+
   --accent-success: #3fb950;
-  --accent-success-soft: rgba(63, 185, 80, 0.14);
-  --accent-warning: #d29922;
+  --accent-success-soft: rgba(63, 185, 80, 0.15);
+  --accent-warning: #fbbf24;
   --accent-danger: #f85149;
-  --accent-danger-soft: rgba(248, 81, 73, 0.14);
+  --accent-danger-soft: rgba(248, 81, 73, 0.15);
 
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.28);
+  --shadow-card: 0 8px 28px rgba(4, 8, 18, 0.45);
 }
 
 :root[data-theme='light'] {
-  --bg-app: #f4f6fa;
+  /* Светлая тема: тёплый кремовый + янтарь и шоколадно-коричневый */
+  --bg-app: #fdf8ef;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #eef2f8;
-  --bg-input: #f8fafc;
-  --border-subtle: rgba(15, 23, 42, 0.09);
-  --border-strong: rgba(15, 23, 42, 0.18);
+  --bg-surface-elevated: #fbf1df;
+  --bg-input: #faf4e8;
+  --border-subtle: rgba(180, 83, 9, 0.15);
+  --border-strong: rgba(180, 83, 9, 0.34);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-primary: #2b1d0e;
+  --text-secondary: #6b4f35;
+  --text-muted: #9a7b5c;
 
-  --accent-primary: #2563eb;
-  --accent-primary-hover: #1d4ed8;
-  --accent-soft: rgba(37, 99, 235, 0.1);
-  --accent-secondary: #7c3aed;
+  --accent-primary: #d97706;
+  --accent-primary-hover: #b45309;
+  --accent-soft: rgba(217, 119, 6, 0.14);
+  --accent-secondary: #ea580c;
+  --accent-brown: #78350f;
+  --accent-gradient: linear-gradient(90deg, #b45309 0%, #f59e0b 55%, #fcd34d 100%);
+  --accent-btn-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 45%, #ea580c 100%);
+  --accent-glow: rgba(245, 158, 11, 0.36);
+
+  --border-gold: rgba(217, 119, 6, 0.45);
+  --border-gold-bright: #d97706;
+  --slider-track-bg: #efe3cf;
+  --slider-thumb-border: #ffffff;
+  --honeycomb-color: rgba(217, 119, 6, 0.1);
+
   --accent-success: #16a34a;
   --accent-success-soft: rgba(22, 163, 74, 0.12);
   --accent-warning: #d97706;
   --accent-danger: #dc2626;
   --accent-danger-soft: rgba(220, 38, 38, 0.1);
 
-  --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 6px 24px rgba(120, 53, 15, 0.08);
 }

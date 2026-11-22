@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Download, Play, Trophy } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import type { ComparisonReport, FunctionMeta, OptimizeConfig } from '../types/api';
@@ -17,6 +17,11 @@ const PAD_L = 58;
 const PAD_R = 16;
 const PAD_T = 16;
 const PAD_B = 28;
+
+function rangeStyle(value: number, min: number, max: number): CSSProperties {
+  const pct = Math.max(0, Math.min(100, ((value - min) / Math.max(1e-9, max - min)) * 100));
+  return { '--range-progress': `${pct}%` } as CSSProperties;
+}
 
 function formatNum(v: number | null, digits = 4): string {
   if (v === null || !Number.isFinite(v)) return '—';
@@ -114,11 +119,16 @@ export function ComparisonTab({
     return PAD_T + (1 - norm) * plotH;
   };
 
+  const clampedDim = Math.min(50, Math.max(2, config.dim));
+  const clampedParticles = Math.min(200, Math.max(5, config.num_particles));
+  const clampedIterations = Math.min(300, Math.max(10, config.max_iterations));
+  const clampedRuns = Math.min(30, Math.max(1, numRuns));
+
   return (
     <div className="compare-tab">
       <section className="card compare-toolbar">
         <div className="compare-controls">
-          <div className="compare-field">
+          <div className="compare-field" style={{ minWidth: 160 }}>
             <label htmlFor="cmp-fn">Целевая функция</label>
             <select
               id="cmp-fn"
@@ -142,7 +152,7 @@ export function ComparisonTab({
             </select>
           </div>
 
-          <div className="compare-field" style={{ minWidth: 96 }}>
+          <div className="compare-field">
             <label htmlFor="cmp-dim">Размерность D</label>
             <input
               id="cmp-dim"
@@ -158,9 +168,23 @@ export function ComparisonTab({
                 })
               }
             />
+            <input
+              type="range"
+              min={2}
+              max={50}
+              value={clampedDim}
+              style={rangeStyle(clampedDim, 2, 50)}
+              onChange={(e) =>
+                onConfigChange({
+                  ...config,
+                  dim: Number(e.target.value),
+                })
+              }
+              aria-label="Ползунок размерности D"
+            />
           </div>
 
-          <div className="compare-field" style={{ minWidth: 96 }}>
+          <div className="compare-field">
             <label htmlFor="cmp-n">Частиц N</label>
             <input
               id="cmp-n"
@@ -176,9 +200,24 @@ export function ComparisonTab({
                 })
               }
             />
+            <input
+              type="range"
+              min={5}
+              max={200}
+              step={5}
+              value={clampedParticles}
+              style={rangeStyle(clampedParticles, 5, 200)}
+              onChange={(e) =>
+                onConfigChange({
+                  ...config,
+                  num_particles: Number(e.target.value),
+                })
+              }
+              aria-label="Ползунок числа частиц N"
+            />
           </div>
 
-          <div className="compare-field" style={{ minWidth: 96 }}>
+          <div className="compare-field">
             <label htmlFor="cmp-iters">Итераций I</label>
             <input
               id="cmp-iters"
@@ -194,9 +233,24 @@ export function ComparisonTab({
                 })
               }
             />
+            <input
+              type="range"
+              min={10}
+              max={300}
+              step={10}
+              value={clampedIterations}
+              style={rangeStyle(clampedIterations, 10, 300)}
+              onChange={(e) =>
+                onConfigChange({
+                  ...config,
+                  max_iterations: Number(e.target.value),
+                })
+              }
+              aria-label="Ползунок числа итераций I"
+            />
           </div>
 
-          <div className="compare-field" style={{ minWidth: 100 }}>
+          <div className="compare-field">
             <label htmlFor="cmp-runs">Прогонов M</label>
             <input
               id="cmp-runs"
@@ -207,10 +261,20 @@ export function ComparisonTab({
               value={numRuns}
               onChange={(e) => setNumRuns(Math.max(1, Math.min(30, Number(e.target.value) || 1)))}
             />
+            <input
+              type="range"
+              min={1}
+              max={30}
+              step={1}
+              value={clampedRuns}
+              style={rangeStyle(clampedRuns, 1, 30)}
+              onChange={(e) => setNumRuns(Number(e.target.value))}
+              aria-label="Ползунок числа прогонов M"
+            />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <div className="compare-actions">
           <button
             type="button"
             className="btn btn-primary"

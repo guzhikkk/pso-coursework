@@ -22,14 +22,14 @@
 .scale-field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
   min-width: 140px;
 }
 
 .scale-field label {
   font-size: 12px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .complexity-strip {
@@ -41,9 +41,11 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--accent-soft);
-  border: 1px solid var(--accent-primary);
+  border: 1px solid var(--border-gold-bright);
   color: var(--accent-primary);
   font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px var(--accent-soft);
 }
 
 .scale-grid {
@@ -55,10 +57,15 @@
 .scale-chart-wrap {
   width: 100%;
   border-radius: var(--radius-md);
-  background: var(--bg-app);
+  background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   padding: var(--space-2);
   margin-bottom: var(--space-3);
+  transition: border-color 0.18s ease;
+}
+
+.scale-chart-wrap:hover {
+  border-color: var(--border-gold);
 }
 
 .scale-svg {
