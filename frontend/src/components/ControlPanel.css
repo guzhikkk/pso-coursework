@@ -1,0 +1,114 @@
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.control-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.control-section:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.control-section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.function-preview {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.function-formula {
+  color: var(--accent-primary);
+  font-size: 12px;
+  margin-bottom: var(--space-1);
+  word-break: break-word;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+}
+
+.segmented-btn {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.segmented-btn.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+.formula-feedback {
+  font-size: 12px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.formula-feedback.ok {
+  background: var(--accent-success-soft);
+  color: var(--accent-success);
+}
+
+.formula-feedback.err {
+  background: var(--accent-danger-soft);
+  color: var(--accent-danger);
+}
+
+.run-btn {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+  font-weight: 600;
+}
