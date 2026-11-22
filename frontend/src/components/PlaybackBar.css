@@ -1,0 +1,71 @@
+.playback-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.playback-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.playback-icon-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+.playback-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+}
+
+.speed-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.speed-btn.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+.playback-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.playback-slider {
+  flex: 1;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.playback-counter {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
