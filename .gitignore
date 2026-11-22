@@ -1,12 +1,16 @@
-# Бэкенд
+# Python
 backend/venv/
-backend/__pycache__/
-backend/.pytest_cache/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+.env
 
-# Фронтенд
+# Frontend / Node
 frontend/node_modules/
 frontend/dist/
-frontend/.DS_Store
 
-# IDE
+# IDE & OS
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
