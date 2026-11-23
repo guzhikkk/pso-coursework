@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Cpu, Download, Play } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import type {
@@ -15,6 +15,20 @@ interface ScaleBenchmarkTabProps {
   config: OptimizeConfig;
 }
 
+interface ScaleLineChartProps {
+  points: ScalePoint[];
+  xKey: 'dim' | 'num_particles';
+  xLabelPrefix: string;
+  xFullTitle: string;
+  color: string;
+}
+
+interface HoverTipState {
+  idx: number;
+  leftPx: number;
+  flipLeft: boolean;
+}
+
 const SVG_W = 460;
 const SVG_H = 190;
 const PAD_L = 52;
@@ -22,12 +36,56 @@ const PAD_R = 16;
 const PAD_T = 16;
 const PAD_B = 26;
 
-function renderBarLineChart(
-  points: ScalePoint[],
-  xKey: 'dim' | 'num_particles',
-  xLabelPrefix: string,
-  color: string
-) {
+function formatFitness(v: number): string {
+  if (!Number.isFinite(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs < 0.0001 || abs >= 100000) return v.toExponential(2);
+  if (abs < 1) return v.toFixed(4);
+  return v.toFixed(2);
+}
+
+function clientToSvgX(svg: SVGSVGElement, clientX: number, clientY: number, fallbackW: number): number {
+  const ctm = svg.getScreenCTM();
+  if (ctm) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(ctm.inverse()).x;
+  }
+  const rect = svg.getBoundingClientRect();
+  return ((clientX - rect.left) / Math.max(1, rect.width)) * fallbackW;
+}
+
+function svgToBoxPosition(
+  svg: SVGSVGElement,
+  svgX: number,
+  fallbackW: number
+): { leftPx: number; flipLeft: boolean } {
+  const box = svg.parentElement ?? svg;
+  const boxRect = box.getBoundingClientRect();
+  const ctm = svg.getScreenCTM();
+  if (ctm && boxRect.width > 0) {
+    const pt = svg.createSVGPoint();
+    pt.x = svgX;
+    pt.y = 0;
+    const screenPt = pt.matrixTransform(ctm);
+    const leftPx = screenPt.x - boxRect.left;
+    return { leftPx, flipLeft: leftPx > boxRect.width * 0.55 };
+  }
+  const pct = svgX / fallbackW;
+  return { leftPx: pct * boxRect.width, flipLeft: pct > 0.55 };
+}
+
+function ScaleLineChart({
+  points,
+  xKey,
+  xLabelPrefix,
+  xFullTitle,
+  color,
+}: ScaleLineChartProps) {
+  const [hoverTip, setHoverTip] = useState<HoverTipState | null>(null);
+
   const plotW = SVG_W - PAD_L - PAD_R;
   const plotH = SVG_H - PAD_T - PAD_B;
 
@@ -38,67 +96,138 @@ function renderBarLineChart(
     x: PAD_L + (points.length > 1 ? idx * stepX : plotW / 2),
     y: PAD_T + (1 - pt.elapsed_ms / maxMs) * plotH,
     label: `${xLabelPrefix}=${pt[xKey]}`,
-    ms: pt.elapsed_ms,
+    point: pt,
   }));
 
   const pathD = coords
     .map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`)
     .join(' ');
 
+  const handleMouseMove = (e: MouseEvent<SVGSVGElement>) => {
+    if (coords.length === 0) return;
+    const svg = e.currentTarget;
+    const svgX = clientToSvgX(svg, e.clientX, e.clientY, SVG_W);
+
+    let nearest = 0;
+    let minDist = Math.abs(coords[0].x - svgX);
+    for (let i = 1; i < coords.length; i++) {
+      const d = Math.abs(coords[i].x - svgX);
+      if (d < minDist) {
+        minDist = d;
+        nearest = i;
+      }
+    }
+    const pos = svgToBoxPosition(svg, coords[nearest].x, SVG_W);
+    setHoverTip({ idx: nearest, leftPx: pos.leftPx, flipLeft: pos.flipLeft });
+  };
+
+  const active = hoverTip ? coords[hoverTip.idx] : null;
+
   return (
-    <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="scale-svg" role="img">
-      {[0, 0.5, 1].map((frac) => {
-        const y = PAD_T + frac * plotH;
-        const val = maxMs * (1 - frac);
-        return (
-          <g key={frac}>
-            <line
-              x1={PAD_L}
-              y1={y}
-              x2={SVG_W - PAD_R}
-              y2={y}
-              stroke="var(--border-subtle)"
-              strokeDasharray="3 3"
-            />
-            <text
-              x={PAD_L - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize="10"
-              fill="var(--text-muted)"
-              className="mono"
-            >
-              {val.toFixed(0)} мс
-            </text>
-          </g>
-        );
-      })}
+    <div className="scale-svg-box">
+      <svg
+        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+        className="scale-svg scale-svg-interactive"
+        role="img"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverTip(null)}
+      >
+        {[0, 0.5, 1].map((frac) => {
+          const y = PAD_T + frac * plotH;
+          const val = maxMs * (1 - frac);
+          return (
+            <g key={frac}>
+              <line
+                x1={PAD_L}
+                y1={y}
+                x2={SVG_W - PAD_R}
+                y2={y}
+                stroke="var(--border-subtle)"
+                strokeDasharray="3 3"
+              />
+              <text
+                x={PAD_L - 8}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="10"
+                fill="var(--text-muted)"
+                className="mono"
+              >
+                {val.toFixed(0)} мс
+              </text>
+            </g>
+          );
+        })}
 
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2.2" />
+        <path d={pathD} fill="none" stroke={color} strokeWidth="2.2" />
 
-      {coords.map((c) => (
-        <g key={c.label}>
-          <circle
-            cx={c.x}
-            cy={c.y}
-            r="4"
-            fill={color}
-            stroke="var(--bg-surface)"
-            strokeWidth="1.5"
+        {active && (
+          <line
+            x1={active.x}
+            y1={PAD_T}
+            x2={active.x}
+            y2={SVG_H - PAD_B}
+            stroke="var(--text-primary)"
+            strokeOpacity="0.45"
+            strokeWidth="1.2"
+            pointerEvents="none"
           />
-          <text
-            x={c.x}
-            y={SVG_H - 6}
-            textAnchor="middle"
-            fontSize="10"
-            fill="var(--text-muted)"
-            className="mono"
-          >
-            {c.label}
-          </text>
-        </g>
-      ))}
-    </svg>
+        )}
+
+        {coords.map((c, idx) => {
+          const isHovered = hoverTip?.idx === idx;
+          return (
+            <g key={c.label}>
+              <circle
+                cx={c.x}
+                cy={c.y}
+                r={isHovered ? 6 : 4}
+                fill={color}
+                stroke="var(--bg-surface)"
+                strokeWidth={isHovered ? 2 : 1.5}
+              />
+              <text
+                x={c.x}
+                y={SVG_H - 6}
+                textAnchor="middle"
+                fontSize="10"
+                fill={isHovered ? 'var(--text-primary)' : 'var(--text-muted)'}
+                fontWeight={isHovered ? 700 : 400}
+                className="mono"
+              >
+                {c.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {hoverTip && active && (
+        <div
+          className={`scale-tooltip${hoverTip.flipLeft ? ' flip-left' : ''}`}
+          style={{ left: `${hoverTip.leftPx}px` }}
+        >
+          <div className="scale-tooltip-title mono">
+            {xFullTitle}: {active.point[xKey]}
+          </div>
+          <div className="scale-tooltip-row">
+            <span className="scale-tooltip-dot" style={{ background: color }} />
+            <span>Время:</span>
+            <strong className="mono">{active.point.elapsed_ms.toFixed(2)} мс</strong>
+          </div>
+          <div className="scale-tooltip-row">
+            <span className="scale-tooltip-dot" style={{ background: 'var(--text-muted)' }} />
+            <span>Память:</span>
+            <strong className="mono">{active.point.peak_memory_kb.toFixed(1)} КБ</strong>
+          </div>
+          <div className="scale-tooltip-row">
+            <span className="scale-tooltip-dot" style={{ background: 'var(--accent-success)' }} />
+            <span>Лучшее f:</span>
+            <strong className="mono">{formatFitness(active.point.best_fitness)}</strong>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -138,12 +267,23 @@ export function ScaleBenchmarkTab({ functions, config }: ScaleBenchmarkTabProps)
 
   const handleExportCsv = () => {
     if (!report) return;
-    const headers = ['series', 'dim', 'num_particles', 'elapsed_ms', 'peak_memory_kb', 'best_fitness'];
+    const headers = [
+      'series',
+      'dim',
+      'num_particles',
+      'elapsed_ms',
+      'peak_memory_kb',
+      'best_fitness',
+    ];
     const dimRows = report.by_dimension.map((r) =>
-      ['by_dimension', r.dim, r.num_particles, r.elapsed_ms, r.peak_memory_kb, r.best_fitness].join(',')
+      ['by_dimension', r.dim, r.num_particles, r.elapsed_ms, r.peak_memory_kb, r.best_fitness].join(
+        ','
+      )
     );
     const partRows = report.by_particles.map((r) =>
-      ['by_particles', r.dim, r.num_particles, r.elapsed_ms, r.peak_memory_kb, r.best_fitness].join(',')
+      ['by_particles', r.dim, r.num_particles, r.elapsed_ms, r.peak_memory_kb, r.best_fitness].join(
+        ','
+      )
     );
     const csv = [headers.join(','), ...dimRows, ...partRows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -248,7 +388,13 @@ export function ScaleBenchmarkTab({ functions, config }: ScaleBenchmarkTabProps)
             </h3>
 
             <div className="scale-chart-wrap">
-              {renderBarLineChart(report.by_dimension, 'dim', 'D', 'var(--accent-primary)')}
+              <ScaleLineChart
+                points={report.by_dimension}
+                xKey="dim"
+                xLabelPrefix="D"
+                xFullTitle="Размерность D"
+                color="var(--accent-primary)"
+              />
             </div>
 
             <div className="table-scroll">
@@ -282,7 +428,13 @@ export function ScaleBenchmarkTab({ functions, config }: ScaleBenchmarkTabProps)
             </h3>
 
             <div className="scale-chart-wrap">
-              {renderBarLineChart(report.by_particles, 'num_particles', 'N', 'var(--accent-secondary)')}
+              <ScaleLineChart
+                points={report.by_particles}
+                xKey="num_particles"
+                xLabelPrefix="N"
+                xFullTitle="Частиц N"
+                color="var(--accent-secondary)"
+              />
             </div>
 
             <div className="table-scroll">

@@ -1,7 +1,12 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type MouseEvent } from 'react';
 import { Download, Play, Trophy } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
-import type { ComparisonReport, FunctionMeta, OptimizeConfig } from '../types/api';
+import type {
+  ComparisonCurvePoint,
+  ComparisonReport,
+  FunctionMeta,
+  OptimizeConfig,
+} from '../types/api';
 import './ComparisonTab.css';
 
 interface ComparisonTabProps {
@@ -10,11 +15,17 @@ interface ComparisonTabProps {
   onConfigChange: (next: OptimizeConfig) => void;
 }
 
+interface HoverTipState {
+  iter: number;
+  leftPx: number;
+  flipLeft: boolean;
+}
+
 const CURVE_COLORS = ['#58a6ff', '#3fb950', '#a78bfa', '#f97316'];
-const SVG_W = 720;
+const SVG_W = 960;
 const SVG_H = 240;
 const PAD_L = 58;
-const PAD_R = 16;
+const PAD_R = 18;
 const PAD_T = 16;
 const PAD_B = 28;
 
@@ -31,6 +42,65 @@ function formatNum(v: number | null, digits = 4): string {
   return v.toFixed(digits);
 }
 
+function formatTooltipVal(v: number): string {
+  if (!Number.isFinite(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs === 0) return '0';
+  if (abs < 0.0001 || abs >= 100000) return v.toExponential(3);
+  if (abs < 1) return v.toFixed(5);
+  if (abs < 100) return v.toFixed(3);
+  return v.toFixed(1);
+}
+
+function findPointForIter(
+  points: ComparisonCurvePoint[],
+  targetIter: number
+): ComparisonCurvePoint | null {
+  if (points.length === 0) return null;
+  let best = points[0];
+  let bestDiff = Math.abs(best.iteration - targetIter);
+  for (let i = 1; i < points.length; i++) {
+    const diff = Math.abs(points[i].iteration - targetIter);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = points[i];
+    }
+  }
+  return best;
+}
+
+function clientToSvgX(svg: SVGSVGElement, clientX: number, clientY: number, fallbackW: number): number {
+  const ctm = svg.getScreenCTM();
+  if (ctm) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(ctm.inverse()).x;
+  }
+  const rect = svg.getBoundingClientRect();
+  return ((clientX - rect.left) / Math.max(1, rect.width)) * fallbackW;
+}
+
+function svgToBoxPosition(
+  svg: SVGSVGElement,
+  svgX: number,
+  fallbackW: number
+): { leftPx: number; flipLeft: boolean } {
+  const box = svg.parentElement ?? svg;
+  const boxRect = box.getBoundingClientRect();
+  const ctm = svg.getScreenCTM();
+  if (ctm && boxRect.width > 0) {
+    const pt = svg.createSVGPoint();
+    pt.x = svgX;
+    pt.y = 0;
+    const screenPt = pt.matrixTransform(ctm);
+    const leftPx = screenPt.x - boxRect.left;
+    return { leftPx, flipLeft: leftPx > boxRect.width * 0.58 };
+  }
+  const pct = svgX / fallbackW;
+  return { leftPx: pct * boxRect.width, flipLeft: pct > 0.58 };
+}
+
 export function ComparisonTab({
   functions,
   config,
@@ -41,10 +111,12 @@ export function ComparisonTab({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logScale, setLogScale] = useState(false);
+  const [hoverTip, setHoverTip] = useState<HoverTipState | null>(null);
 
   const handleRunCompare = async () => {
     setIsLoading(true);
     setError(null);
+    setHoverTip(null);
     try {
       const data = await apiClient.compare(config, numRuns);
       setReport(data);
@@ -109,7 +181,10 @@ export function ComparisonTab({
     yMin = Math.min(...allY);
     yMax = Math.max(...allY);
     if (Math.abs(yMax - yMin) < 1e-9) yMax = yMin + 1;
-    maxIter = Math.max(1, ...report.curves.map((c) => Math.max(0, c.points.length - 1)));
+    maxIter = Math.max(
+      1,
+      ...report.curves.flatMap((c) => c.points.map((p) => p.iteration))
+    );
   }
 
   const toX = (iter: number) => PAD_L + (iter / maxIter) * plotW;
@@ -118,6 +193,37 @@ export function ComparisonTab({
     const norm = (val - yMin) / Math.max(1e-9, yMax - yMin);
     return PAD_T + (1 - norm) * plotH;
   };
+
+  const handleSvgMouseMove = (e: MouseEvent<SVGSVGElement>) => {
+    if (!report || report.curves.length === 0) return;
+    const svg = e.currentTarget;
+    const svgX = clientToSvgX(svg, e.clientX, e.clientY, SVG_W);
+    const frac = Math.max(0, Math.min(1, (svgX - PAD_L) / plotW));
+    const iter = Math.round(frac * maxIter);
+    const pos = svgToBoxPosition(svg, toX(iter), SVG_W);
+    setHoverTip({ iter, leftPx: pos.leftPx, flipLeft: pos.flipLeft });
+  };
+
+  const hoverIter = hoverTip?.iter ?? null;
+  const hoverX = hoverIter !== null ? toX(hoverIter) : 0;
+  const hoverRows =
+    report && hoverIter !== null
+      ? report.curves
+          .map((curve, idx) => {
+            const pt = findPointForIter(curve.points, hoverIter);
+            if (!pt) return null;
+            return {
+              preset_id: curve.preset_id,
+              label: curve.label,
+              color: CURVE_COLORS[idx % CURVE_COLORS.length],
+              iteration: pt.iteration,
+              value: pt.mean_best_fitness,
+              x: toX(pt.iteration),
+              y: toY(pt.mean_best_fitness),
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+      : [];
 
   const clampedDim = Math.min(50, Math.max(2, config.dim));
   const clampedParticles = Math.min(200, Math.max(5, config.num_particles));
@@ -308,7 +414,8 @@ export function ComparisonTab({
               <span>Лидер серии: {report.winner_label}</span>
             </span>
             <span className="mono">
-              {report.function_meta.name} · D={report.dim}, N={report.num_particles}, I={report.max_iterations}, M={report.num_runs}
+              {report.function_meta.name} · D={report.dim}, N={report.num_particles}, I=
+              {report.max_iterations}, M={report.num_runs}
             </span>
           </div>
 
@@ -325,68 +432,127 @@ export function ComparisonTab({
             </div>
 
             <div className="compare-chart-wrap">
-              <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="compare-svg" role="img" aria-label="Сравнение кривых сходимости">
-                {[0, 0.5, 1].map((frac) => {
-                  const y = PAD_T + frac * plotH;
-                  const val = yMax - frac * (yMax - yMin);
-                  const label = logScale ? `1e${val.toFixed(1)}` : formatNum(val, 2);
-                  return (
-                    <g key={frac}>
-                      <line
-                        x1={PAD_L}
-                        y1={y}
-                        x2={SVG_W - PAD_R}
-                        y2={y}
-                        stroke="var(--border-subtle)"
-                        strokeDasharray="3 3"
-                      />
-                      <text
-                        x={PAD_L - 8}
-                        y={y + 4}
-                        textAnchor="end"
-                        fontSize="10"
-                        fill="var(--text-muted)"
-                        className="mono"
-                      >
-                        {label}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                <text x={PAD_L} y={SVG_H - 6} fontSize="10" fill="var(--text-muted)" className="mono">
-                  0
-                </text>
-                <text
-                  x={SVG_W - PAD_R}
-                  y={SVG_H - 6}
-                  textAnchor="end"
-                  fontSize="10"
-                  fill="var(--text-muted)"
-                  className="mono"
+              <div className="compare-svg-box">
+                <svg
+                  viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+                  className="compare-svg chart-svg-interactive"
+                  role="img"
+                  aria-label="Сравнение кривых сходимости"
+                  onMouseMove={handleSvgMouseMove}
+                  onMouseLeave={() => setHoverTip(null)}
                 >
-                  итер. {maxIter}
-                </text>
+                  {[0, 0.5, 1].map((frac) => {
+                    const y = PAD_T + frac * plotH;
+                    const val = yMax - frac * (yMax - yMin);
+                    const label = logScale ? `1e${val.toFixed(1)}` : formatNum(val, 2);
+                    return (
+                      <g key={frac}>
+                        <line
+                          x1={PAD_L}
+                          y1={y}
+                          x2={SVG_W - PAD_R}
+                          y2={y}
+                          stroke="var(--border-subtle)"
+                          strokeDasharray="3 3"
+                        />
+                        <text
+                          x={PAD_L - 8}
+                          y={y + 4}
+                          textAnchor="end"
+                          fontSize="10"
+                          fill="var(--text-muted)"
+                          className="mono"
+                        >
+                          {label}
+                        </text>
+                      </g>
+                    );
+                  })}
 
-                {report.curves.map((curve, idx) => {
-                  const color = CURVE_COLORS[idx % CURVE_COLORS.length];
-                  const d = curve.points
-                    .map(
-                      (pt, i) =>
-                        `${i === 0 ? 'M' : 'L'}${toX(pt.iteration).toFixed(1)},${toY(pt.mean_best_fitness).toFixed(1)}`
-                    )
-                    .join(' ');
-                  return (
-                    <path
-                      key={curve.preset_id}
-                      d={d}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="2.2"
-                    />
-                  );
-                })}
-              </svg>
+                  <text
+                    x={PAD_L}
+                    y={SVG_H - 6}
+                    fontSize="10"
+                    fill="var(--text-muted)"
+                    className="mono"
+                  >
+                    0
+                  </text>
+                  <text
+                    x={SVG_W - PAD_R}
+                    y={SVG_H - 6}
+                    textAnchor="end"
+                    fontSize="10"
+                    fill="var(--text-muted)"
+                    className="mono"
+                  >
+                    итер. {maxIter}
+                  </text>
+
+                  {report.curves.map((curve, idx) => {
+                    const color = CURVE_COLORS[idx % CURVE_COLORS.length];
+                    const d = curve.points
+                      .map(
+                        (pt, i) =>
+                          `${i === 0 ? 'M' : 'L'}${toX(pt.iteration).toFixed(1)},${toY(pt.mean_best_fitness).toFixed(1)}`
+                      )
+                      .join(' ');
+                    return (
+                      <path
+                        key={curve.preset_id}
+                        d={d}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="2.2"
+                      />
+                    );
+                  })}
+
+                  {hoverTip && hoverRows.length > 0 && (
+                    <g pointerEvents="none">
+                      <line
+                        x1={hoverX}
+                        y1={PAD_T}
+                        x2={hoverX}
+                        y2={SVG_H - PAD_B}
+                        stroke="var(--text-primary)"
+                        strokeOpacity="0.45"
+                        strokeWidth="1.2"
+                      />
+                      {hoverRows.map((row) => (
+                        <circle
+                          key={row.preset_id}
+                          cx={row.x}
+                          cy={row.y}
+                          r="4.6"
+                          fill={row.color}
+                          stroke="var(--bg-surface)"
+                          strokeWidth="1.8"
+                        />
+                      ))}
+                    </g>
+                  )}
+                </svg>
+
+                {hoverTip && hoverRows.length > 0 && (
+                  <div
+                    className={`compare-tooltip${hoverTip.flipLeft ? ' flip-left' : ''}`}
+                    style={{ left: `${hoverTip.leftPx}px` }}
+                  >
+                    <div className="compare-tooltip-title mono">Итерация {hoverTip.iter}</div>
+                    {hoverRows.map((row) => (
+                      <div key={row.preset_id} className="compare-tooltip-row">
+                        <span
+                          className="compare-tooltip-dot"
+                          style={{ background: row.color }}
+                        />
+                        <span className="compare-tooltip-name">{row.label}</span>
+                        <strong className="mono">{formatTooltipVal(row.value)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="compare-legend">
                 {report.curves.map((curve, idx) => (

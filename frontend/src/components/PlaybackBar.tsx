@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -32,6 +33,9 @@ export function PlaybackBar({
   onSpeedChange,
 }: PlaybackBarProps) {
   const maxStep = Math.max(0, totalSteps - 1);
+  const clampedStep = Math.min(currentStep, maxStep);
+  const progressPct =
+    disabled || maxStep === 0 ? 0 : Math.max(0, Math.min(100, (clampedStep / maxStep) * 100));
 
   return (
     <section className="card playback-bar" aria-label="Управление воспроизведением итераций">
@@ -114,8 +118,9 @@ export function PlaybackBar({
           className="playback-slider"
           min={0}
           max={maxStep}
-          value={Math.min(currentStep, maxStep)}
+          value={clampedStep}
           disabled={disabled}
+          style={{ '--range-progress': `${progressPct}%` } as CSSProperties}
           onChange={(e) => onStepChange(Number(e.target.value))}
           aria-label="Выбор итерации"
         />
